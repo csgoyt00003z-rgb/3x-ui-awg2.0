@@ -3,6 +3,7 @@
   <a-form-item label='Forward To'>
     <a-select v-model="inbound.settings.forward.type" :dropdown-class-name="themeSwitcher.currentTheme">
       <a-select-option value="wireguardInbound">Panel WireGuard inbound</a-select-option>
+      <a-select-option value="hysteria2Inbound">Panel Hysteria 2 inbound</a-select-option>
       <a-select-option value="external">External UDP target</a-select-option>
     </a-select>
   </a-form-item>
@@ -15,7 +16,15 @@
     </a-select>
   </a-form-item>
 
-  <template v-else>
+  <a-form-item v-else-if="inbound.settings.forward.type === 'hysteria2Inbound'" label='Hysteria 2 Inbound'>
+    <a-select v-model="inbound.settings.forward.hysteria2InboundId" :dropdown-class-name="themeSwitcher.currentTheme">
+      <a-select-option v-for="h2Inbound in hysteria2Inbounds" :key="h2Inbound.id" :value="h2Inbound.id">
+        #[[ h2Inbound.id ]] [[ h2Inbound.remark || 'Hysteria 2' ]] : [[ h2Inbound.port ]]
+      </a-select-option>
+    </a-select>
+  </a-form-item>
+
+  <template v-else-if="inbound.settings.forward.type === 'external'">
     <a-form-item label='Target Host'>
       <a-input v-model.trim="inbound.settings.forward.host"></a-input>
     </a-form-item>
@@ -216,7 +225,7 @@
   </template>
 
   <a-alert
-    v-if="inbound.settings.forward.type === 'external'"
+    v-if="inbound.settings.forward.type !== 'wireguardInbound'"
     type="info"
     show-icon
     message="Client management and wingsv export are available only when forwarding to an existing WireGuard inbound.">

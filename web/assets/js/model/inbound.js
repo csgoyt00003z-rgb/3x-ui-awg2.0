@@ -5,6 +5,7 @@ const Protocols = {
     SHADOWSOCKS: 'shadowsocks',
     WIREGUARD: 'wireguard',
     HYSTERIA: 'hysteria',
+    HYSTERIA2: 'hysteria2',
     MIXED: 'mixed',
     HTTP: 'http',
     TUNNEL: 'tunnel',
@@ -3243,10 +3244,11 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
 };
 
 Inbound.VKTurnProxySettings.Forward = class extends XrayCommonClass {
-    constructor(type = 'wireguardInbound', wireguardInboundId = 0, host = '', port = 0) {
+    constructor(type = 'wireguardInbound', wireguardInboundId = 0, hysteria2InboundId = 0, host = '', port = 0) {
         super();
         this.type = type;
         this.wireguardInboundId = wireguardInboundId;
+        this.hysteria2InboundId = hysteria2InboundId;
         this.host = host;
         this.port = port;
     }
@@ -3255,6 +3257,7 @@ Inbound.VKTurnProxySettings.Forward = class extends XrayCommonClass {
         return new Inbound.VKTurnProxySettings.Forward(
             json.type ?? 'wireguardInbound',
             json.wireguardInboundId ?? 0,
+            json.hysteria2InboundId ?? 0,
             json.host ?? '',
             json.port ?? 0,
         );
@@ -3263,9 +3266,10 @@ Inbound.VKTurnProxySettings.Forward = class extends XrayCommonClass {
     toJson() {
         return {
             type: this.type,
-            wireguardInboundId: this.wireguardInboundId || undefined,
-            host: this.host || undefined,
-            port: this.port || undefined,
+            wireguardInboundId: this.type === 'wireguardInbound' ? (this.wireguardInboundId || undefined) : undefined,
+            hysteria2InboundId: this.type === 'hysteria2Inbound' ? (this.hysteria2InboundId || undefined) : undefined,
+            host: this.type === 'external' ? (this.host || undefined) : undefined,
+            port: this.type === 'external' ? (this.port || undefined) : undefined,
         };
     }
 };

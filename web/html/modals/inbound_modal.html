@@ -161,6 +161,9 @@
             },
             get wireguardInbounds() {
                 return window.inboundsApp ? window.inboundsApp.dbInbounds.filter(inbound => inbound.isWireguard) : [];
+            },
+            get hysteria2Inbounds() {
+                return window.inboundsApp ? window.inboundsApp.dbInbounds.filter(inbound => inbound.protocol === Protocols.HYSTERIA2) : [];
             }
         },
         watch: {

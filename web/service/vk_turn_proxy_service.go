@@ -45,12 +45,14 @@ type VKTurnProxyForwardType string
 
 const (
 	VKTurnProxyForwardWireGuardInbound VKTurnProxyForwardType = "wireguardInbound"
+	VKTurnProxyForwardHysteria2Inbound VKTurnProxyForwardType = "hysteria2Inbound"
 	VKTurnProxyForwardExternal         VKTurnProxyForwardType = "external"
 )
 
 type VKTurnProxyForward struct {
 	Type               VKTurnProxyForwardType `json:"type"`
 	WireGuardInboundID int                    `json:"wireguardInboundId,omitempty"`
+	Hysteria2InboundID int                    `json:"hysteria2InboundId,omitempty"`
 	Host               string                 `json:"host,omitempty"`
 	Port               int                    `json:"port,omitempty"`
 }
@@ -736,6 +738,17 @@ func (s *InboundService) validateVKTurnProxySettings(settings *VKTurnProxySettin
 		if target.Protocol != model.WireGuard {
 			return common.NewError("selected forward target is not a wireguard inbound")
 		}
+	case VKTurnProxyForwardHysteria2Inbound:
+		if settings.Forward.Hysteria2InboundID <= 0 {
+			return common.NewError("hysteria2 inbound is required")
+		}
+		target, err := s.GetInbound(settings.Forward.Hysteria2InboundID)
+		if err != nil {
+			return err
+		}
+		if target.Protocol != model.Hysteria2 {
+			return common.NewError("selected forward target is not a hysteria2 inbound")
+		}
 	case VKTurnProxyForwardExternal:
 		if strings.TrimSpace(settings.Forward.Host) == "" {
 			return common.NewError("external forward host is required")
@@ -791,6 +804,20 @@ func (s *InboundService) resolveVKTurnProxyForwardAddress(settings *VKTurnProxyS
 		}
 		if inbound.Protocol != model.WireGuard {
 			return "", common.NewError("selected inbound is not wireguard")
+		}
+		host := strings.TrimSpace(inbound.Listen)
+		switch host {
+		case "", "0.0.0.0", "::", "::0":
+			host = "127.0.0.1"
+		}
+		return net.JoinHostPort(host, fmt.Sprintf("%d", inbound.Port)), nil
+	case VKTurnProxyForwardHysteria2Inbound:
+		inbound, err := s.GetInbound(settings.Forward.Hysteria2InboundID)
+		if err != nil {
+			return "", err
+		}
+		if inbound.Protocol != model.Hysteria2 {
+			return "", common.NewError("selected inbound is not hysteria2")
 		}
 		host := strings.TrimSpace(inbound.Listen)
 		switch host {
