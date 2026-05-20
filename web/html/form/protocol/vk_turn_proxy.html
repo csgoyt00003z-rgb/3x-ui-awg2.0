@@ -230,5 +230,12 @@
     show-icon
     message="Client management and wingsv export are available only when forwarding to an existing WireGuard inbound.">
   </a-alert>
+
+  <a-alert
+    type="warning"
+    show-icon
+    style="margin-top: 8px;"
+    message="Глобальные правила маршрутизации (geosite, geoip, inboundTag) не применяются к vk-turn-proxy напрямую: трафик идёт прозрачным UDP-форвардом. Чтобы правила работали, нужно форвардить на WireGuard inbound с включённым «No Kernel Tun» — тогда пакеты пройдут через gVisor TUN xray и попадут в роутер.">
+  </a-alert>
 </a-form>
 {{end}}

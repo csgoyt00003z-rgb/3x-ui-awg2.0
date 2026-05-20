@@ -19,8 +19,23 @@
   <a-form-item label='MTU'>
     <a-input-number v-model.number="inbound.settings.mtu"></a-input-number>
   </a-form-item>
-  <a-form-item label='No Kernel Tun'>
+  <a-form-item>
+    <template slot="label">
+      No Kernel Tun
+      <a-tooltip>
+        <template slot="title">
+          <div>
+            <b>Off</b> (default): WireGuard decapsulation happens in the kernel; throughput is highest, but packets bypass Xray's router — routing rules (geosite, geoip, inboundTag, etc.) <b>do not apply</b>.<br/>
+            <b>On</b>: gVisor user-space TUN inside Xray. Routing rules apply, including <code>ext:geosite_*.dat</code> and <code>ext:geoip_*.dat</code>. Throughput is lower than kernel mode.
+          </div>
+        </template>
+        <a-icon type="question-circle"></a-icon>
+      </a-tooltip>
+    </template>
     <a-switch v-model="inbound.settings.noKernelTun"></a-switch>
+    <div v-if="!inbound.settings.noKernelTun" style="color: rgba(255,193,7,0.85); font-size: 12px; margin-top: 4px;">
+      ⚠ В режиме kernel TUN правила маршрутизации (geosite / geoip / inboundTag) не применяются к этому инбаунду.
+    </div>
   </a-form-item>
   <a-form-item label="Peers">
     <a-button icon="plus" type="primary" size="small" @click="inbound.settings.addPeer()"></a-button>
