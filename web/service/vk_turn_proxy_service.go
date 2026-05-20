@@ -101,6 +101,10 @@ type VKTurnProxySettings struct {
 	WbStreamE2EEnabled        bool                `json:"wbStreamE2eEnabled,omitempty"`
 	WbStreamE2ESecret         string              `json:"wbStreamE2eSecret,omitempty"`
 	WbStreamExchangeViaVKTurn bool                `json:"wbStreamExchangeViaVkTurn,omitempty"`
+	WrapMode                  string              `json:"wrapMode,omitempty"`
+	WrapCipher                string              `json:"wrapCipher,omitempty"`
+	WrapKeyHex                string              `json:"wrapKeyHex,omitempty"`
+	WrapAcceptClientKeys      *bool               `json:"wrapAcceptClientKeys,omitempty"`
 	Clients                   []VKTurnProxyClient `json:"clients,omitempty"`
 }
 
@@ -414,11 +418,15 @@ func (s *VKTurnProxyService) loadDesiredSpecs() (map[int]vkturnproxy.Spec, error
 			listenHost = "0.0.0.0"
 		}
 		spec := vkturnproxy.Spec{
-			ID:          inbound.Id,
-			Remark:      inbound.Remark,
-			Listen:      net.JoinHostPort(listenHost, fmt.Sprintf("%d", inbound.Port)),
-			Connect:     connect,
-			SessionMode: settings.SessionMode,
+			ID:                   inbound.Id,
+			Remark:               inbound.Remark,
+			Listen:               net.JoinHostPort(listenHost, fmt.Sprintf("%d", inbound.Port)),
+			Connect:              connect,
+			SessionMode:          settings.SessionMode,
+			WrapMode:             settings.WrapMode,
+			WrapCipher:           settings.WrapCipher,
+			WrapKeyHex:           settings.WrapKeyHex,
+			WrapAcceptClientKeys: settings.WrapAcceptClientKeys,
 		}
 		if settings.WbStreamEnabled && !settings.WbStreamExchangeViaVKTurn {
 			spec.WbStreamRoomID = strings.TrimSpace(settings.WbStreamRoomID)

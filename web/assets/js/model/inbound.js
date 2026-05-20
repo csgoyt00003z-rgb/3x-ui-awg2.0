@@ -3143,6 +3143,10 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
         wbStreamE2eEnabled = false,
         wbStreamE2eSecret = '',
         wbStreamExchangeViaVkTurn = false,
+        wrapMode = 'on',
+        wrapCipher = 'any',
+        wrapKeyHex = '',
+        wrapAcceptClientKeys = null,
         clients = []
     ) {
         super(protocol);
@@ -3162,6 +3166,10 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
         this.wbStreamE2eEnabled = wbStreamE2eEnabled;
         this.wbStreamE2eSecret = wbStreamE2eSecret;
         this.wbStreamExchangeViaVkTurn = wbStreamExchangeViaVkTurn;
+        this.wrapMode = wrapMode;
+        this.wrapCipher = wrapCipher;
+        this.wrapKeyHex = wrapKeyHex;
+        this.wrapAcceptClientKeys = wrapAcceptClientKeys;
         this.clients = clients;
     }
 
@@ -3184,6 +3192,10 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
             json.wbStreamE2eEnabled ?? false,
             json.wbStreamE2eSecret ?? '',
             json.wbStreamExchangeViaVkTurn ?? false,
+            json.wrapMode ?? 'on',
+            json.wrapCipher ?? 'any',
+            json.wrapKeyHex ?? '',
+            json.wrapAcceptClientKeys ?? null,
             (json.clients || []).map(client => Inbound.VKTurnProxySettings.Client.fromJson(client)),
         );
     }
@@ -3206,6 +3218,10 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
             wbStreamE2eEnabled: this.wbStreamEnabled && this.wbStreamE2eEnabled ? true : undefined,
             wbStreamE2eSecret: this.wbStreamEnabled && this.wbStreamE2eEnabled ? (this.wbStreamE2eSecret || undefined) : undefined,
             wbStreamExchangeViaVkTurn: this.wbStreamEnabled && this.wbStreamExchangeViaVkTurn ? true : undefined,
+            wrapMode: this.wrapMode && this.wrapMode !== 'on' ? this.wrapMode : undefined,
+            wrapCipher: this.wrapCipher && this.wrapCipher !== 'any' ? this.wrapCipher : undefined,
+            wrapKeyHex: this.wrapKeyHex ? this.wrapKeyHex.trim() : undefined,
+            wrapAcceptClientKeys: this.wrapAcceptClientKeys == null ? undefined : this.wrapAcceptClientKeys,
             clients: Inbound.VKTurnProxySettings.Client.toJsonArray(this.clients),
         };
     }

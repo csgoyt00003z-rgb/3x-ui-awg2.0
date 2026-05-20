@@ -74,6 +74,55 @@
     </a-select>
   </a-form-item>
 
+  <a-divider style="margin: 8px 0">Обфускация / WRAP</a-divider>
+
+  <a-form-item label='Режим WRAP'>
+    <a-select v-model="inbound.settings.wrapMode" :dropdown-class-name="themeSwitcher.currentTheme">
+      <a-select-option value="on">Принимать (рекомендуется)</a-select-option>
+      <a-select-option value="off">Отключено</a-select-option>
+    </a-select>
+  </a-form-item>
+
+  <template v-if="inbound.settings.wrapMode !== 'off'">
+    <a-form-item>
+      <template slot="label">
+        Шифр
+        <a-tooltip title="Допустимые AEAD-шифры. 'any' принимает оба варианта; клиент выбирает свой первый поддерживаемый.">
+          <a-icon type="question-circle"></a-icon>
+        </a-tooltip>
+      </template>
+      <a-select v-model="inbound.settings.wrapCipher" :dropdown-class-name="themeSwitcher.currentTheme">
+        <a-select-option value="any">any</a-select-option>
+        <a-select-option value="srtp-aes-gcm">SRTP / AES-256-GCM (ARM AES-NI)</a-select-option>
+        <a-select-option value="srtp-chacha20-poly1305">SRTP / ChaCha20-Poly1305 (программный)</a-select-option>
+      </a-select>
+    </a-form-item>
+
+    <a-form-item>
+      <template slot="label">
+        Preset ключ (hex)
+        <a-tooltip title="Опциональный фиксированный 32-байтный ключ (64 hex). Если задан — имеет приоритет над wrap_key_proposal клиента.">
+          <a-icon type="question-circle"></a-icon>
+        </a-tooltip>
+      </template>
+      <a-input v-model.trim="inbound.settings.wrapKeyHex" placeholder="пусто = принимать предложение клиента"></a-input>
+    </a-form-item>
+
+    <a-form-item>
+      <template slot="label">
+        Принимать ключ клиента
+        <a-tooltip title="По умолчанию — да: сервер берёт wrap_key_proposal из SessionHello клиента. Отключите, если используете preset ключ как единственный источник истины.">
+          <a-icon type="question-circle"></a-icon>
+        </a-tooltip>
+      </template>
+      <a-select v-model="inbound.settings.wrapAcceptClientKeys" :dropdown-class-name="themeSwitcher.currentTheme">
+        <a-select-option :value="null">по умолчанию (да)</a-select-option>
+        <a-select-option :value="true">Да</a-select-option>
+        <a-select-option :value="false">Нет (требует preset)</a-select-option>
+      </a-select>
+    </a-form-item>
+  </template>
+
   <a-divider style="margin: 8px 0">WB Stream (LiveKit transport)</a-divider>
 
   <a-form-item label='Включить WB Stream'>

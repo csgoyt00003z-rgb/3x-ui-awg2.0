@@ -49,6 +49,14 @@ type Spec struct {
 	WbStreamRoomID      string
 	WbStreamDisplayName string
 	WbStreamE2ESecret   string
+	// WRAP SRTP-mimicry obfuscation: bypasses VK TURN content filter.
+	// WrapMode == "" or "on" enables the listener-side acceptance of
+	// client-proposed WRAP via mu/v1 SessionHello; "off" disables it
+	// entirely (clients fall back to raw).
+	WrapMode             string
+	WrapCipher           string // "any" | "srtp-aes-gcm" | "srtp-chacha20-poly1305"
+	WrapKeyHex           string // optional fixed key (64 hex chars); takes precedence over client proposal when set
+	WrapAcceptClientKeys *bool  // default true; when false requires WrapKeyHex
 }
 
 type HeartbeatState struct {
@@ -62,6 +70,14 @@ type HeartbeatState struct {
 var heartbeatLinePattern = regexp.MustCompile(`protobuf heartbeat from .*: online=(true|false) active_streams=(\d+) version=(\d+) (?:proto_fp|wg_fp)="([^"]*)"`)
 
 func (s Spec) Key() string {
+	acceptClientKeys := ""
+	if s.WrapAcceptClientKeys != nil {
+		if *s.WrapAcceptClientKeys {
+			acceptClientKeys = "1"
+		} else {
+			acceptClientKeys = "0"
+		}
+	}
 	return strings.Join([]string{
 		fmt.Sprintf("%d", s.ID),
 		s.Listen,
@@ -70,6 +86,10 @@ func (s Spec) Key() string {
 		s.WbStreamRoomID,
 		s.WbStreamDisplayName,
 		s.WbStreamE2ESecret,
+		s.WrapMode,
+		s.WrapCipher,
+		s.WrapKeyHex,
+		acceptClientKeys,
 	}, "\x00")
 }
 
@@ -154,6 +174,23 @@ func (p *Process) Start() (err error) {
 	}
 	if strings.TrimSpace(p.spec.SessionMode) != "" && p.spec.SessionMode != "auto" {
 		args = append(args, "-session-mode", p.spec.SessionMode)
+	}
+	wrapMode := strings.ToLower(strings.TrimSpace(p.spec.WrapMode))
+	if wrapMode == "off" {
+		args = append(args, "-wrap-mode", "off")
+	} else if wrapMode == "" || wrapMode == "on" {
+		// vk-turn-server defaults to -wrap-mode=on already; pass it
+		// explicitly only when the user picked a specific cipher or
+		// preset key so the spec is reproducible from the args alone.
+		if cipher := strings.TrimSpace(p.spec.WrapCipher); cipher != "" && cipher != "any" {
+			args = append(args, "-wrap-mode", "on", "-wrap-cipher", cipher)
+		}
+		if keyHex := strings.TrimSpace(p.spec.WrapKeyHex); keyHex != "" {
+			args = append(args, "-wrap-key", keyHex)
+		}
+		if p.spec.WrapAcceptClientKeys != nil && !*p.spec.WrapAcceptClientKeys {
+			args = append(args, "-wrap-accept-client-keys=false")
+		}
 	}
 	if roomID := strings.TrimSpace(p.spec.WbStreamRoomID); roomID != "" {
 		args = append(args, "-wb-stream-room-id", roomID)
