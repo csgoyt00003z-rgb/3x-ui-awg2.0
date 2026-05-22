@@ -3100,6 +3100,7 @@ Inbound.WireguardSettings.Peer = class extends XrayCommonClass {
         this.allowedIPs = allowedIPs;
         this.keepAlive = keepAlive;
     }
+    
 
     static fromJson(json = {}) {
         return new Inbound.WireguardSettings.Peer(
@@ -3124,6 +3125,243 @@ Inbound.WireguardSettings.Peer = class extends XrayCommonClass {
         };
     }
 };
+/**
+ * AmneziaWG 2.0 Settings
+ * Место вставки: web/assets/js/model/inbound.js, после класса WireguardSettings
+ *
+ * Источник протокола: https://github.com/amnezia-vpn/amneziawg-go
+ *
+ * Параметры обфускации:
+ *   Jc/Jmin/Jmax     — junk-пакеты (только клиент)
+ *   S1–S4            — padding сообщений (обе стороны)
+ *   H1–H4            — замена uint32-заголовков (обе стороны)
+ *   I1–I5            — custom signature packets AWG 2.0 (только клиент)
+ */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AWG 2.0 Peer (клиент)
+// ─────────────────────────────────────────────────────────────────────────────
+class AwgPeer {
+    constructor(
+        publicKey  = '',
+        allowedIPs = [],
+        privateKey = '',  // сохраняется для генерации клиентского конфига
+        address    = '',  // IP-адрес клиента в туннеле, например 10.0.0.2/32
+        email      = '',
+        limitIp    = 0,
+        totalGB    = 0,
+        expiryTime = 0,
+        enable     = true,
+        tgId       = '',
+        subId      = '',
+        comment    = '',
+        reset      = 0
+    ) {
+        this.publicKey  = publicKey
+        this.allowedIPs = allowedIPs
+        this.privateKey = privateKey
+        this.address    = address
+        this.email      = email
+        this.limitIp    = limitIp
+        this.totalGB    = totalGB
+        this.expiryTime = expiryTime
+        this.enable     = enable
+        this.tgId       = tgId
+        this.subId      = subId
+        this.comment    = comment
+        this.reset      = reset
+    }
+
+    static fromJson(json = {}) {
+        return new AwgPeer(
+            json.publicKey  ?? '',
+            json.allowedIPs ?? [],
+            json.privateKey ?? '',
+            json.address    ?? '',
+            json.email      ?? '',
+            json.limitIp    ?? 0,
+            json.totalGB    ?? 0,
+            json.expiryTime ?? 0,
+            json.enable     ?? true,
+            json.tgId       ?? '',
+            json.subId      ?? '',
+            json.comment    ?? '',
+            json.reset      ?? 0
+        )
+    }
+
+    toJson() {
+        return {
+            publicKey:  this.publicKey,
+            privateKey: this.privateKey,
+            address:    this.address,
+            allowedIPs: this.allowedIPs,
+            email:      this.email,
+            limitIp:    this.limitIp,
+            totalGB:    this.totalGB,
+            expiryTime: this.expiryTime,
+            enable:     this.enable,
+            tgId:       this.tgId,
+            subId:      this.subId,
+            comment:    this.comment,
+            reset:      this.reset,
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AWG 2.0 Inbound Settings
+// ─────────────────────────────────────────────────────────────────────────────
+class AwgSettings {
+    constructor(
+        mtu        = 1420,
+        privateKey = '',
+        serverPubKey = '',    // публичный ключ сервера (для клиентских конфигов)
+        // Junk packets — только клиентская сторона
+        jc         = 4,
+        jMin       = 40,
+        jMax       = 70,
+        // Padding обоих сторон
+        s1         = 0,
+        s2         = 0,
+        s3         = 0,
+        s4         = 0,
+        // Header ranges — обоих сторон, формат: "x-y" или одиночное число
+        h1         = '1-3',
+        h2         = '1-3',
+        h3         = '5-7',
+        h4         = '5-7',
+        // Custom signature packets — AWG 2.0, только клиентская сторона
+        // Теги: <b 0x[hex]>, <r [size]>, <rd [size]>, <rc [size]>, <t>
+        i1         = '',
+        i2         = '',
+        i3         = '',
+        i4         = '',
+        i5         = '',
+        peers      = []
+    ) {
+        this.mtu          = mtu
+        this.privateKey   = privateKey
+        this.serverPubKey = serverPubKey
+        this.jc           = jc
+        this.jMin         = jMin
+        this.jMax         = jMax
+        this.s1           = s1
+        this.s2           = s2
+        this.s3           = s3
+        this.s4           = s4
+        this.h1           = h1
+        this.h2           = h2
+        this.h3           = h3
+        this.h4           = h4
+        this.i1           = i1
+        this.i2           = i2
+        this.i3           = i3
+        this.i4           = i4
+        this.i5           = i5
+        this.peers        = peers
+    }
+
+    static fromJson(json = {}) {
+        return new AwgSettings(
+            json.mtu          ?? 1420,
+            json.privateKey   ?? '',
+            json.serverPubKey ?? '',
+            json.jc           ?? 4,
+            json.jMin         ?? 40,
+            json.jMax         ?? 70,
+            json.s1           ?? 0,
+            json.s2           ?? 0,
+            json.s3           ?? 0,
+            json.s4           ?? 0,
+            json.h1           ?? '1-3',
+            json.h2           ?? '1-3',
+            json.h3           ?? '5-7',
+            json.h4           ?? '5-7',
+            json.i1           ?? '',
+            json.i2           ?? '',
+            json.i3           ?? '',
+            json.i4           ?? '',
+            json.i5           ?? '',
+            (json.peers ?? []).map(p => AwgPeer.fromJson(p))
+        )
+    }
+
+    toJson() {
+        return {
+            mtu:          this.mtu,
+            privateKey:   this.privateKey,
+            serverPubKey: this.serverPubKey,
+            jc:           this.jc,
+            jMin:         this.jMin,
+            jMax:         this.jMax,
+            s1:           this.s1,
+            s2:           this.s2,
+            s3:           this.s3,
+            s4:           this.s4,
+            h1:           this.h1,
+            h2:           this.h2,
+            h3:           this.h3,
+            h4:           this.h4,
+            i1:           this.i1,
+            i2:           this.i2,
+            i3:           this.i3,
+            i4:           this.i4,
+            i5:           this.i5,
+            peers:        this.peers.map(p => p.toJson()),
+        }
+    }
+
+    /**
+     * Генерирует клиентский .conf файл для AmneziaWG
+     * @param {AwgPeer} peer - объект клиента
+     * @param {string} serverEndpoint - "host:port"
+     * @param {string} dns
+     * @param {string} allowedIPs
+     */
+    genClientConf(peer, serverEndpoint, dns = '1.1.1.1, 1.0.0.1',
+                  allowedIPs = '0.0.0.0/0, ::/0', keepalive = 25) {
+        let txt = '[Interface]\n'
+        txt += `PrivateKey = ${peer.privateKey}\n`
+        txt += `Address = ${peer.address || '10.0.0.2/32'}\n`
+        txt += `DNS = ${dns}\n`
+        txt += `MTU = ${this.mtu}\n`
+
+        // Junk packets (клиентская сторона)
+        if (this.jc > 0) {
+            txt += `Jc = ${this.jc}\n`
+            txt += `Jmin = ${this.jMin}\n`
+            txt += `Jmax = ${this.jMax}\n`
+        }
+
+        // Padding
+        if (this.s1 > 0) txt += `S1 = ${this.s1}\n`
+        if (this.s2 > 0) txt += `S2 = ${this.s2}\n`
+        if (this.s3 > 0) txt += `S3 = ${this.s3}\n`
+        if (this.s4 > 0) txt += `S4 = ${this.s4}\n`
+
+        // Header ranges
+        if (this.h1) txt += `H1 = ${this.h1}\n`
+        if (this.h2) txt += `H2 = ${this.h2}\n`
+        if (this.h3) txt += `H3 = ${this.h3}\n`
+        if (this.h4) txt += `H4 = ${this.h4}\n`
+
+        // Custom signature packets — AWG 2.0
+        if (this.i1) txt += `I1 = ${this.i1}\n`
+        if (this.i2) txt += `I2 = ${this.i2}\n`
+        if (this.i3) txt += `I3 = ${this.i3}\n`
+        if (this.i4) txt += `I4 = ${this.i4}\n`
+        if (this.i5) txt += `I5 = ${this.i5}\n`
+
+        txt += '\n[Peer]\n'
+        txt += `PublicKey = ${this.serverPubKey}\n`
+        txt += `Endpoint = ${serverEndpoint}\n`
+        txt += `AllowedIPs = ${allowedIPs}\n`
+        if (keepalive > 0) txt += `PersistentKeepalive = ${keepalive}\n`
+        return txt
+    }
+}
+
 
 Inbound.VKTurnProxySettings = class extends Inbound.Settings {
     constructor(

@@ -247,6 +247,259 @@
                           </a-menu-item>
                           <a-menu-item key="qrcode"
                             v-if="(dbInbound.isSS && !dbInbound.toInbound().isSSMultiUser) || dbInbound.isWireguard">
+                            <!--
+  Шаблон формы AmneziaWG 2.0 для web/html/xui/inbound.html
+  Место вставки: рядом с блоком `v-if="inbound.protocol === 'wireguard'"`
+
+  Использует Ant Design Vue компоненты (a-row, a-col, a-form-item, a-input и т.д.)
+  по аналогии с существующими формами в 3x-ui.
+-->
+
+<!-- ===================== AmneziaWG 2.0 Settings ===================== -->
+<a-tab-pane v-if="inbound.protocol === 'awg'" key="settings" :tab="i18n('awg.title')">
+
+  <!-- Ключи -->
+  <a-row :gutter="[16, 0]">
+    <a-col :span="14">
+      <a-form-item :label="i18n('pages.inbounds.privateKey')">
+        <a-input v-model="inbound.settings.privateKey"
+                 placeholder="Введите или сгенерируйте"
+                 addon-after>
+          <a-button slot="addonAfter" size="small" @click="generateAwgKeyPair">
+            {{ i18n('actions.generate') }}
+          </a-button>
+        </a-input>
+      </a-form-item>
+    </a-col>
+    <a-col :span="10">
+      <a-form-item :label="i18n('pages.inbounds.publicKey')">
+        <a-input v-model="inbound.settings.serverPubKey" read-only />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <a-row :gutter="[16, 0]">
+    <a-col :span="6">
+      <a-form-item label="MTU">
+        <a-input-number v-model="inbound.settings.mtu"
+                        :min="576" :max="9000" style="width:100%" />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- ─── Junk Packets ─── -->
+  <a-divider orientation="left">
+    Junk Packets
+    <a-tooltip placement="right">
+      <template slot="title">
+        Перед каждым хэндшейком отправляется Jc пакетов случайного размера [Jmin, Jmax].
+        Настраивается только на клиентской стороне.
+        Если Jmax ≥ MTU системы — пакет дробится, что выглядит подозрительно.
+      </template>
+      <a-icon type="question-circle" style="margin-left:6px;color:#aaa" />
+    </a-tooltip>
+  </a-divider>
+  <a-row :gutter="[16, 0]">
+    <a-col :span="8">
+      <a-form-item label="Jc (количество)">
+        <a-input-number v-model="inbound.settings.jc"
+                        :min="0" :max="128" style="width:100%"
+                        placeholder="4" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="8">
+      <a-form-item label="Jmin (мин. байт)">
+        <a-input-number v-model="inbound.settings.jMin"
+                        :min="0" style="width:100%"
+                        placeholder="40" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="8">
+      <a-form-item label="Jmax (макс. байт)">
+        <a-input-number v-model="inbound.settings.jMax"
+                        :min="0" style="width:100%"
+                        placeholder="70" />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- ─── Message Padding S1–S4 ─── -->
+  <a-divider orientation="left">
+    Message Padding (S1–S4)
+    <a-tooltip placement="right">
+      <template slot="title">
+        S1 — padding handshake initial, S2 — response, S3 — cookie, S4 — transport.
+        Настраивается на обеих сторонах (сервер + клиент должны совпадать).
+      </template>
+      <a-icon type="question-circle" style="margin-left:6px;color:#aaa" />
+    </a-tooltip>
+  </a-divider>
+  <a-row :gutter="[16, 0]">
+    <a-col :span="6">
+      <a-form-item label="S1 (init)">
+        <a-input-number v-model="inbound.settings.s1" :min="0" style="width:100%" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="6">
+      <a-form-item label="S2 (response)">
+        <a-input-number v-model="inbound.settings.s2" :min="0" style="width:100%" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="6">
+      <a-form-item label="S3 (cookie)">
+        <a-input-number v-model="inbound.settings.s3" :min="0" style="width:100%" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="6">
+      <a-form-item label="S4 (transport)">
+        <a-input-number v-model="inbound.settings.s4" :min="0" style="width:100%" />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- ─── Message Headers H1–H4 ─── -->
+  <a-divider orientation="left">
+    Message Headers (H1–H4)
+    <a-tooltip placement="right">
+      <template slot="title">
+        Заменяет uint32-тип в начале WireGuard-пакетов.
+        Формат: одно число "1234" или диапазон "100-999".
+        Должен совпадать на сервере и клиенте.
+      </template>
+      <a-icon type="question-circle" style="margin-left:6px;color:#aaa" />
+    </a-tooltip>
+  </a-divider>
+  <a-row :gutter="[16, 0]">
+    <a-col :span="6">
+      <a-form-item label="H1 (init)">
+        <a-input v-model="inbound.settings.h1" placeholder="1-3" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="6">
+      <a-form-item label="H2 (response)">
+        <a-input v-model="inbound.settings.h2" placeholder="1-3" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="6">
+      <a-form-item label="H3 (cookie)">
+        <a-input v-model="inbound.settings.h3" placeholder="5-7" />
+      </a-form-item>
+    </a-col>
+    <a-col :span="6">
+      <a-form-item label="H4 (transport)">
+        <a-input v-model="inbound.settings.h4" placeholder="5-7" />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- ─── Custom Signature Packets I1–I5 (AWG 2.0) ─── -->
+  <a-divider orientation="left">
+    Custom Signature Packets I1–I5
+    <a-tag color="blue" style="margin-left:6px;font-size:11px">AWG 2.0</a-tag>
+    <a-tooltip placement="right">
+      <template slot="title">
+        <div>Отправляются перед каждым хэндшейком (после Junk-пакетов).</div>
+        <div>Только клиентская сторона. Пустое поле = пакет пропускается.</div>
+        <br/>
+        <div><b>Теги:</b></div>
+        <div><code>&lt;b 0xDEADBEEF&gt;</code> — статические байты (hex)</div>
+        <div><code>&lt;r 16&gt;</code> — 16 случайных байт</div>
+        <div><code>&lt;rd 8&gt;</code> — 8 случайных цифр [0-9]</div>
+        <div><code>&lt;rc 12&gt;</code> — 12 случайных букв [a-zA-Z]</div>
+        <div><code>&lt;t&gt;</code> — 4-байтовый UNIX timestamp</div>
+        <br/>
+        <div><b>Пример:</b> <code>&lt;b 0x484f5354&gt;&lt;r 4&gt;&lt;t&gt;</code></div>
+      </template>
+      <a-icon type="question-circle" style="margin-left:6px;color:#aaa" />
+    </a-tooltip>
+  </a-divider>
+  <a-row :gutter="[16, 0]" v-for="n in 5" :key="'awg-i'+n">
+    <a-col :span="24">
+      <a-form-item :label="'I' + n">
+        <a-input
+          v-model="inbound.settings['i' + n]"
+          :placeholder="n === 1
+            ? 'Пример: <b 0x484f5354><r 4><t>'
+            : 'Необязательно (пусто = пропустить)'"
+          allow-clear
+          style="font-family: monospace"
+        />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- ─── Peers (клиенты) ─── -->
+  <a-divider orientation="left">Peers (клиенты)</a-divider>
+
+  <div v-for="(peer, idx) in inbound.settings.peers" :key="'peer-'+idx"
+       style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:12px;margin-bottom:12px">
+    <a-row :gutter="[16, 0]" align="middle">
+      <a-col :span="1">
+        <span style="color:#999;font-size:12px">#{{idx+1}}</span>
+      </a-col>
+      <a-col :span="11">
+        <a-form-item :label="i18n('pages.inbounds.publicKey')" style="margin-bottom:0">
+          <a-input v-model="peer.publicKey" placeholder="Public Key клиента" />
+        </a-form-item>
+      </a-col>
+      <a-col :span="9">
+        <a-form-item label="Address (тоннель)" style="margin-bottom:0">
+          <a-input v-model="peer.address" placeholder="10.0.0.2/32" />
+        </a-form-item>
+      </a-col>
+      <a-col :span="3" style="text-align:right">
+        <a-button type="danger" icon="delete" size="small"
+                  @click="inbound.settings.peers.splice(idx, 1)" />
+      </a-col>
+    </a-row>
+    <a-row :gutter="[16, 0]" style="margin-top:8px">
+      <a-col :span="10">
+        <a-form-item label="Email" style="margin-bottom:0">
+          <a-input v-model="peer.email" placeholder="user@example.com" />
+        </a-form-item>
+      </a-col>
+      <a-col :span="7">
+        <a-form-item label="Allowed IPs" style="margin-bottom:0">
+          <a-select v-model="peer.allowedIPs" mode="tags"
+                    placeholder="0.0.0.0/0, ::/0" style="width:100%">
+          </a-select>
+        </a-form-item>
+      </a-col>
+      <a-col :span="3">
+        <a-form-item :label="i18n('pages.inbounds.trafficGB')" style="margin-bottom:0">
+          <a-input-number v-model="peer.totalGB" :min="0" style="width:100%" />
+        </a-form-item>
+      </a-col>
+      <a-col :span="4">
+        <a-form-item :label="i18n('pages.inbounds.enableToggle')" style="margin-bottom:0">
+          <a-switch v-model="peer.enable" />
+        </a-form-item>
+      </a-col>
+    </a-row>
+  </div>
+
+  <a-button type="dashed" icon="plus" block
+            @click="inbound.settings.peers.push(new AwgPeer())">
+    Добавить peer
+  </a-button>
+
+</a-tab-pane>
+<!-- ===================== / AmneziaWG 2.0 Settings ===================== -->
+
+
+<!--
+  JavaScript, добавить в блок methods/computed paneli (рядом с существующими generateWgKeyPair и т.п.):
+
+  generateAwgKeyPair() {
+      // Если доступен WebCrypto — генерируем curve25519 ключи
+      // Или вызываем API панели /api/inbound/awg/generate-keypair
+      this.$http.get('/api/inbound/awg/generateKeypair').then(resp => {
+          this.inbound.settings.privateKey = resp.data.privateKey
+          this.inbound.settings.serverPubKey = resp.data.publicKey
+      })
+  }
+-->
+
                             <a-icon type="qrcode"></a-icon>
                             {{ i18n "qrCode" }}
                           </a-menu-item>

@@ -984,3 +984,80 @@ install_x-ui() {
 echo -e "${green}Running...${plain}"
 install_base
 install_x-ui $1
+#!/bin/bash
+# ============================================================
+# Фрагмент для install.sh — установка amneziawg-go
+# Вставить в функцию install() или вызвать отдельно
+# ============================================================
+
+install_amneziawg() {
+    echo ">>> Installing amneziawg-go..."
+
+    # Определить архитектуру
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64)         AWG_ARCH="amd64"  ;;
+        aarch64|arm64)  AWG_ARCH="arm64"  ;;
+        armv7l)         AWG_ARCH="arm"    ;;
+        *)
+            echo "Unsupported architecture: $ARCH"
+            return 1
+            ;;
+    esac
+
+    # Получить последнюю версию
+    AWG_VERSION=$(curl -s "https://api.github.com/repos/amnezia-vpn/amneziawg-go/releases/latest" \
+        | grep '"tag_name"' \
+        | cut -d '"' -f4)
+
+    if [ -z "$AWG_VERSION" ]; then
+        echo "Failed to fetch amneziawg-go version"
+        return 1
+    fi
+
+    echo "Latest amneziawg-go version: $AWG_VERSION"
+
+    # Скачать бинарник
+    AWG_URL="https://github.com/amnezia-vpn/amneziawg-go/releases/download/${AWG_VERSION}/amneziawg-go-linux-${AWG_ARCH}"
+    wget -q --show-progress -O /usr/local/bin/amneziawg-go "$AWG_URL" || {
+        echo "Failed to download amneziawg-go"
+        return 1
+    }
+    chmod +x /usr/local/bin/amneziawg-go
+    echo "amneziawg-go installed: $(amneziawg-go --version 2>/dev/null || echo $AWG_VERSION)"
+
+    # Установить amneziawg-tools (содержит команду `awg`)
+    install_amneziawg_tools "$AWG_ARCH" "$AWG_VERSION"
+
+    # Создать директорию для конфигов
+    mkdir -p /etc/amneziawg
+    chmod 700 /etc/amneziawg
+
+    echo ">>> amneziawg-go installation complete"
+}
+
+install_amneziawg_tools() {
+    local ARCH="$1"
+    local VERSION="$2"
+
+    # amneziawg-tools содержит утилиту `awg` (аналог `wg`)
+    # https://github.com/amnezia-vpn/amneziawg-tools
+    TOOLS_URL="https://github.com/amnezia-vpn/amneziawg-tools/releases/latest/download/amneziawg-tools-linux-${ARCH}.tar.gz"
+
+    TMP_DIR=$(mktemp -d)
+    wget -q -O "$TMP_DIR/awg-tools.tar.gz" "$TOOLS_URL" && \
+        tar -xzf "$TMP_DIR/awg-tools.tar.gz" -C "$TMP_DIR" && \
+        cp "$TMP_DIR/awg" /usr/local/bin/awg && \
+        chmod +x /usr/local/bin/awg
+    rm -rf "$TMP_DIR"
+
+    if command -v awg &>/dev/null; then
+        echo "awg (amneziawg-tools) installed"
+    else
+        echo "Warning: awg tools not installed. Manual install may be needed."
+        echo "See: https://github.com/amnezia-vpn/amneziawg-tools"
+    fi
+}
+
+# Добавить вызов в основную функцию install():
+# install_amneziawg

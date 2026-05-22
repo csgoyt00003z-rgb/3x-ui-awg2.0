@@ -130,7 +130,7 @@ func (s *SubService) getSubscriptionInboundsBySubId(subId string) ([]*model.Inbo
 		FROM inbounds,
 			JSON_EACH(JSON_EXTRACT(inbounds.settings, '$.clients')) AS client
 		WHERE
-			protocol in ('vmess','vless','trojan','shadowsocks','vk-turn-proxy','hysteria','hysteria2')
+			protocol in ('vmess','vless','trojan','shadowsocks','vk-turn-proxy','hysteria','hysteria2','awg')
 			AND JSON_EXTRACT(client.value, '$.subId') = ? AND enable = ?
 	)`, subId, true).Find(&inbounds).Error
 	if err != nil {
@@ -183,6 +183,8 @@ func (s *SubService) getLink(inbound *model.Inbound, email string) string {
 		return s.genShadowsocksLink(inbound, email)
 	case "hysteria", "hysteria2":
 		return s.genHysteriaLink(inbound, email)
+	case "awg": // ← ДОБАВИТЬ
+		return s.genAWGLink(inbound, email) // ← ДОБАВИТЬ
 	}
 	return ""
 }
@@ -1493,4 +1495,109 @@ func getHostFromXFH(s string) (string, error) {
 		return realHost, nil
 	}
 	return s, nil
+}
+func (s *SubService) genAWGLink(inbound *model.Inbound, email string) string {
+	var settings map[string]any
+	if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+		return ""
+	}
+
+	peers, _ := settings["peers"].([]any)
+	var peer map[string]any
+	for _, p := range peers {
+		if pm, ok := p.(map[string]any); ok {
+			if pm["email"] == email {
+				peer = pm
+				break
+			}
+		}
+	}
+	if peer == nil {
+		return ""
+	}
+
+	mtu := 1420
+	if v, ok := settings["mtu"].(float64); ok {
+		mtu = int(v)
+	}
+
+	getInt := func(k string) int {
+		if v, ok := settings[k].(float64); ok {
+			return int(v)
+		}
+		return 0
+	}
+	getStr := func(k string) string {
+		if v, ok := settings[k].(string); ok {
+			return v
+		}
+		return ""
+	}
+
+	address := s.resolveInboundAddress(inbound)
+	endpoint := fmt.Sprintf("%s:%d", address, inbound.Port)
+
+	clientPrivKey, _ := peer["privateKey"].(string)
+	clientAddr, _ := peer["address"].(string)
+	serverPubKey := getStr("serverPubKey")
+
+	var sb strings.Builder
+	sb.WriteString("[Interface]\n")
+	sb.WriteString(fmt.Sprintf("PrivateKey = %s\n", clientPrivKey))
+	sb.WriteString(fmt.Sprintf("Address = %s\n", clientAddr))
+	sb.WriteString("DNS = 1.1.1.1, 1.0.0.1\n")
+	sb.WriteString(fmt.Sprintf("MTU = %d\n", mtu))
+
+	if jc := getInt("jc"); jc > 0 {
+		sb.WriteString(fmt.Sprintf("Jc = %d\n", jc))
+		sb.WriteString(fmt.Sprintf("Jmin = %d\n", getInt("jMin")))
+		sb.WriteString(fmt.Sprintf("Jmax = %d\n", getInt("jMax")))
+	}
+	if v := getInt("s1"); v > 0 {
+		sb.WriteString(fmt.Sprintf("S1 = %d\n", v))
+	}
+	if v := getInt("s2"); v > 0 {
+		sb.WriteString(fmt.Sprintf("S2 = %d\n", v))
+	}
+	if v := getInt("s3"); v > 0 {
+		sb.WriteString(fmt.Sprintf("S3 = %d\n", v))
+	}
+	if v := getInt("s4"); v > 0 {
+		sb.WriteString(fmt.Sprintf("S4 = %d\n", v))
+	}
+	if v := getStr("h1"); v != "" {
+		sb.WriteString(fmt.Sprintf("H1 = %s\n", v))
+	}
+	if v := getStr("h2"); v != "" {
+		sb.WriteString(fmt.Sprintf("H2 = %s\n", v))
+	}
+	if v := getStr("h3"); v != "" {
+		sb.WriteString(fmt.Sprintf("H3 = %s\n", v))
+	}
+	if v := getStr("h4"); v != "" {
+		sb.WriteString(fmt.Sprintf("H4 = %s\n", v))
+	}
+	// AWG 2.0 — I1-I5
+	if v := getStr("i1"); v != "" {
+		sb.WriteString(fmt.Sprintf("I1 = %s\n", v))
+	}
+	if v := getStr("i2"); v != "" {
+		sb.WriteString(fmt.Sprintf("I2 = %s\n", v))
+	}
+	if v := getStr("i3"); v != "" {
+		sb.WriteString(fmt.Sprintf("I3 = %s\n", v))
+	}
+	if v := getStr("i4"); v != "" {
+		sb.WriteString(fmt.Sprintf("I4 = %s\n", v))
+	}
+	if v := getStr("i5"); v != "" {
+		sb.WriteString(fmt.Sprintf("I5 = %s\n", v))
+	}
+
+	sb.WriteString("\n[Peer]\n")
+	sb.WriteString(fmt.Sprintf("PublicKey = %s\n", serverPubKey))
+	sb.WriteString(fmt.Sprintf("Endpoint = %s\n", endpoint))
+	sb.WriteString("AllowedIPs = 0.0.0.0/0, ::/0\n")
+	sb.WriteString("PersistentKeepalive = 25\n")
+	return sb.String()
 }
