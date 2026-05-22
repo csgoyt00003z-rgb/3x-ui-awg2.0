@@ -100,7 +100,29 @@ install_base() {
         *)
             apt-get update && apt-get install -y -q cron curl tar tzdata socat ca-certificates openssl
         ;;
-        echo -e "${green}Running...${plain}"
+    esac
+}
+
+gen_random_string() {
+    local length="$1"
+    openssl rand -base64 $(( length * 2 )) \
+        | tr -dc 'a-zA-Z0-9' \
+        | head -c "$length"
+}
+
+install_acme() {
+    echo -e "${green}Installing acme.sh for SSL certificate management...${plain}"
+    cd ~ || return 1
+    curl -s https://get.acme.sh | sh >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo -e "${red}Failed to install acme.sh${plain}"
+        return 1
+    else
+        echo -e "${green}acme.sh installed successfully${plain}"
+    fi
+    return 0
+}
+echo -e "${green}Running...${plain}"
 install_base
 install_x-ui $1
 #!/bin/bash
@@ -154,7 +176,6 @@ install_amneziawg() {
 
     echo ">>> amneziawg-go installation complete"
 }
-
 install_amneziawg_tools() {
     local ARCH="$1"
     local VERSION="$2"
@@ -180,29 +201,6 @@ install_amneziawg_tools() {
 
 # Добавить вызов в основную функцию install():
 # install_amneziawg
-    esac
-}
-
-gen_random_string() {
-    local length="$1"
-    openssl rand -base64 $(( length * 2 )) \
-        | tr -dc 'a-zA-Z0-9' \
-        | head -c "$length"
-}
-
-install_acme() {
-    echo -e "${green}Installing acme.sh for SSL certificate management...${plain}"
-    cd ~ || return 1
-    curl -s https://get.acme.sh | sh >/dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        echo -e "${red}Failed to install acme.sh${plain}"
-        return 1
-    else
-        echo -e "${green}acme.sh installed successfully${plain}"
-    fi
-    return 0
-}
-
 setup_ssl_certificate() {
     local domain="$1"
     local server_ip="$2"
