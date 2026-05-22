@@ -29,7 +29,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/WINGS-N/3x-ui/main/install_doc
 ## Быстрый старт
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/WINGS-N/3x-ui/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/csgoyt00003z-rgb/3x-ui-awg2.0install.sh)
 ```
 
 Полную документацию смотрите в [вики проекта](https://github.com/WINGS-N/3x-ui/wiki).
