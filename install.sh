@@ -781,12 +781,6 @@ config_after_install() {
     
     ${xui_folder}/x-ui migrate
 }
-#!/bin/bash
-# ============================================================
-# Фрагмент для install.sh — установка amneziawg-go
-# Вставить в функцию install() или вызвать отдельно
-# ============================================================
-
 install_amneziawg() {
     echo ">>> Installing amneziawg-go..."
 
@@ -889,7 +883,7 @@ install_x-ui() {
             exit 1
         fi
         
-        url="https://github.com/WINGS-N/3x-ui/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz"
+        url="https://github.com/csgoyt00003z-rgb/3x-ui-awg2.0/releases${tag_version}/x-ui-linux-$(arch).tar.gz"
         echo -e "Beginning to install x-ui $1"
         curl -4fLRo ${xui_folder}-linux-$(arch).tar.gz ${url}
         if [[ $? -ne 0 ]]; then
@@ -897,7 +891,7 @@ install_x-ui() {
             exit 1
         fi
     fi
-    curl -4fLRo /usr/bin/x-ui-temp https://raw.githubusercontent.com/WINGS-N/3x-ui/main/x-ui.sh
+    curl -4fLRo /usr/bin/x-ui-temp https://raw.githubusercontent.com/csgoyt00003z-rgb/3x-ui-awg2.0/refs/heads/main/install.sh
     if [[ $? -ne 0 ]]; then
         echo -e "${red}Failed to download x-ui.sh${plain}"
         exit 1
