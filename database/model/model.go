@@ -29,6 +29,7 @@ const (
 	// accepts both.
 	Hysteria  Protocol = "hysteria"
 	Hysteria2 Protocol = "hysteria2"
+	AmnesiaWG Protocol = "AWG"
 )
 
 // IsHysteria returns true for both "hysteria" and "hysteria2".
