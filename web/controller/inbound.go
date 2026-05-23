@@ -37,7 +37,12 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.GET("/:id/vkTurnProxy/clients/:clientId/stats", a.getVKTurnProxyClientStats)
 	g.GET("/:id/vkTurnProxy/exportClient/:clientId", a.exportVKTurnProxyClient)
 	g.GET("/:id/vkTurnProxy/exportAll", a.exportAllVKTurnProxyClients)
-
+	awgCtrl := InboundController.NewAWGController()
+	g.GET("/server/awg/keypair", awgCtrl.GenerateKeyPair)
+	g.GET("/server/awg/defaults", awgCtrl.GenerateDefaults)
+	g.GET("/server/awg/clientconf", awgCtrl.GetClientConf)
+	g.POST("/server/awg/apply", awgCtrl.ApplyInbound)
+	g.POST("/server/awg/stop", awgCtrl.StopInbound)
 	g.POST("/add", a.addInbound)
 	g.POST("/del/:id", a.delInbound)
 	g.POST("/update/:id", a.updateInbound)
@@ -61,6 +66,10 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.POST("/lastOnline", a.lastOnline)
 	g.POST("/updateClientTraffic/:email", a.updateClientTraffic)
 	g.POST("/:id/delClientByEmail/:email", a.delInboundClientByEmail)
+}
+
+func (a InboundController) NewAWGController() any {
+	panic("unimplemented")
 }
 
 type CopyInboundClientsRequest struct {

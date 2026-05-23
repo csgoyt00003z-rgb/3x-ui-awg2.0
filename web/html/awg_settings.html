@@ -1,0 +1,191 @@
+<!--
+  awg_settings.html — Вставка настроек AmneziaWG 2.0.
+
+  Как использовать:
+  Найди в web/html/xui/inbounds.html блок с настройками WireGuard
+  и добавь ниже него этот блок (или замени, если хочешь только AWG).
+
+  Предполагается что awg.js уже подключён и awgSettings присутствует
+  в data() компонента (AWGMixinData).
+
+  ВАЖНО: v-if="inbound.protocol === 'amneziawg'" — условие отображения.
+-->
+
+<!-- =====================================================================
+     AmneziaWG 2.0 — Настройки inbound'а
+     ===================================================================== -->
+<template v-if="inbound.protocol === 'amneziawg'">
+
+  <!-- Основные параметры ────────────────────────────────────────────── -->
+  <a-divider orientation="left" style="font-weight:600">
+    <i class="fa fa-shield-halved" style="margin-right:6px;color:#1890ff"></i>
+    AmneziaWG 2.0 — Основные настройки
+  </a-divider>
+
+  <a-row :gutter="[16,0]">
+    <a-col :xs="24" :sm="12">
+      <a-form-item label="Адрес сервера в туннеле">
+        <a-input v-model:value="awgSettings.serverAddress"
+                 placeholder="10.0.0.1/24" />
+      </a-form-item>
+    </a-col>
+    <a-col :xs="12" :sm="6">
+      <a-form-item label="MTU">
+        <a-input-number v-model:value="awgSettings.mtu"
+                        :min="576" :max="9000" placeholder="1420"
+                        style="width:100%" />
+      </a-form-item>
+    </a-col>
+    <a-col :xs="12" :sm="6">
+      <a-form-item label="Порт">
+        <a-input-number v-model:value="inbound.port"
+                        :min="1" :max="65535" style="width:100%" />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- Ключи ─────────────────────────────────────────────────────────── -->
+  <a-row :gutter="[16,0]">
+    <a-col :xs="24" :sm="18">
+      <a-form-item label="Приватный ключ сервера">
+        <a-input v-model:value="awgSettings.secretKey"
+                 placeholder="Нажми «Сгенерировать» →" />
+      </a-form-item>
+    </a-col>
+    <a-col :xs="24" :sm="6" style="display:flex;align-items:center;padding-top:4px">
+      <a-button block type="dashed" @click="awgDoGenerateKeyPair">
+        🔑 Сгенерировать
+      </a-button>
+    </a-col>
+  </a-row>
+
+  <a-row :gutter="[16,0]" v-if="awgSettings.publicKey">
+    <a-col :span="24">
+      <a-form-item label="Публичный ключ сервера">
+        <a-input :value="awgSettings.publicKey" readonly>
+          <template #suffix>
+            <copy-outlined @click="$message.info('Скопировано'); copy(awgSettings.publicKey)"
+                           style="cursor:pointer;color:#1890ff" />
+          </template>
+        </a-input>
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- AWG 2.0 — Обфускация ───────────────────────────────────────────── -->
+  <a-divider orientation="left" style="font-weight:600;margin-top:24px">
+    🔀 AWG 2.0 — Обфускация трафика
+  </a-divider>
+
+  <a-alert type="info" show-icon style="margin-bottom:16px"
+    message="Параметры обфускации делают трафик неотличимым от обычного UDP для DPI-систем.
+             При нулевых значениях ведёт себя как обычный WireGuard." />
+
+  <a-button type="dashed" block @click="awgDoGenerateDefaults" style="margin-bottom:16px">
+    ✨ Сгенерировать случайные параметры AWG 2.0
+  </a-button>
+
+  <!-- Junk packets ──────────────────────────────────────────────────── -->
+  <a-row :gutter="[16,0]">
+    <a-col :xs="8">
+      <a-form-item label="Jc (кол-во)">
+        <a-tooltip title="Количество мусорных пакетов перед рукопожатием. Рекомендуется: 4-12">
+          <a-input-number v-model:value="awgSettings.awg.jc"
+                          :min="0" :max="16" placeholder="0" style="width:100%" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+    <a-col :xs="8">
+      <a-form-item label="Jmin (байт)">
+        <a-tooltip title="Минимальный размер мусорного пакета. Должен быть ≤ Jmax">
+          <a-input-number v-model:value="awgSettings.awg.jmin"
+                          :min="0" :max="1400" placeholder="0" style="width:100%" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+    <a-col :xs="8">
+      <a-form-item label="Jmax (байт)">
+        <a-tooltip title="Максимальный размер мусорного пакета. Должен быть меньше MTU системы">
+          <a-input-number v-model:value="awgSettings.awg.jmax"
+                          :min="0" :max="1400" placeholder="0" style="width:100%" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- Padding S1-S4 ─────────────────────────────────────────────────── -->
+  <a-row :gutter="[16,0]">
+    <a-col :xs="12" :sm="6">
+      <a-form-item label="S1 (Init)">
+        <a-tooltip title="Паддинг пакета Init (0-64 байт)">
+          <a-input-number v-model:value="awgSettings.awg.s1"
+                          :min="0" :max="64" placeholder="0" style="width:100%" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+    <a-col :xs="12" :sm="6">
+      <a-form-item label="S2 (Response)">
+        <a-tooltip title="Паддинг пакета Response (0-64 байт)">
+          <a-input-number v-model:value="awgSettings.awg.s2"
+                          :min="0" :max="64" placeholder="0" style="width:100%" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+    <a-col :xs="12" :sm="6">
+      <a-form-item label="S3 (Cookie)">
+        <a-tooltip title="Паддинг пакета Cookie (0-64 байт)">
+          <a-input-number v-model:value="awgSettings.awg.s3"
+                          :min="0" :max="64" placeholder="0" style="width:100%" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+    <a-col :xs="12" :sm="6">
+      <a-form-item label="S4 (Data)">
+        <a-tooltip title="Паддинг транспортных пакетов (0-32 байт)">
+          <a-input-number v-model:value="awgSettings.awg.s4"
+                          :min="0" :max="32" placeholder="0" style="width:100%" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- Headers H1-H4 ─────────────────────────────────────────────────── -->
+  <a-alert v-if="awgHeadersHaveOverlap()" type="warning" show-icon
+    message="⚠️ Диапазоны H1-H4 пересекаются! Они должны быть уникальными и не пересекаться."
+    style="margin-bottom:12px" />
+
+  <a-row :gutter="[16,0]">
+    <a-col :xs="12" :sm="6" v-for="hn in ['h1','h2','h3','h4']" :key="hn">
+      <a-form-item :label="hn.toUpperCase() + ' заголовок'">
+        <a-tooltip :title="`Динамический заголовок для пакетов типа ${hn.toUpperCase()}.
+Формат: одно число (напр. 1234) или диапазон (напр. 1000-2000).
+Диапазоны H1-H4 НЕ должны пересекаться.`">
+          <a-input v-model:value="awgSettings.awg[hn]"
+                   placeholder="напр. 1234 или 100-999" />
+        </a-tooltip>
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+  <!-- CPS / I1-I5 ────────────────────────────────────────────────────── -->
+  <a-divider orientation="left" style="font-weight:600;margin-top:16px">
+    🎭 CPS пакеты I1-I5 (имитация UDP протоколов)
+  </a-divider>
+
+  <a-alert type="info" show-icon style="margin-bottom:12px"
+    :message="`Эти пакеты отправляются ПЕРЕД каждым рукопожатием для имитации QUIC, DNS, SIP и т.д.
+Только для клиентской стороны — на сервере не нужно.
+Теги: <b 0x…> статические байты | <r N> случайные байты | <rd N> цифры | <rc N> буквы | <t> timestamp`" />
+
+  <a-row :gutter="[16,0]" v-for="n in [1,2,3,4,5]" :key="'i'+n">
+    <a-col :span="24">
+      <a-form-item :label="'I' + n + (n===1 ? ' (основной)' : '')">
+        <a-input v-model:value="awgSettings.awg['i'+n]"
+                 :placeholder="n===1 ? 'напр. <b 0xd100000001><rc 8><t><r 50>' : ''"
+                 allow-clear />
+      </a-form-item>
+    </a-col>
+  </a-row>
+
+</template>
+<!-- end AmneziaWG settings -->
